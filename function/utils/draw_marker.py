@@ -1,0 +1,55 @@
+# function/utils/draw_marker.py
+from psychopy import visual
+from function.config.settings import WINDOW_SIZE
+
+# ─── Grid position ────────────────────────────────────────────────────────
+N_ROWS = 6
+N_COLS = 8
+MARKER_ROW = 1
+MARKER_COL = N_COLS  # top-right
+
+# ─── Marker size ──────────────────────────────────────────────────────────
+MARKER_SIZE_FRAC = 0.6  # ratio to the shorter side of the cell
+
+# Cache the stimulus on the PsychoPy Window itself. The experiment normally
+# owns one window, and keeping the cache there also prevents a marker created
+# for one window from being drawn on another window.
+_MARKER_CACHE_ATTR = "_photodiode_marker_stim"
+
+
+def _cell_center(win_width, win_height, row, col):
+    x_center = win_width * ((col - 0.5) / N_COLS - 0.5)
+    y_center = win_height * (0.5 - (row - 0.5) / N_ROWS)
+    return x_center, y_center
+
+
+# ══════════════════════════════════════════════════════════════════
+# ★ PHOTODIODE MARKER PRIMITIVE — WHOLE TASK
+#   Fired in : draw_marker()
+#   Condition: called by an onset or response trigger path
+#   Photodiode: single white square primitive, top-right
+#   Log tag  : assigned by the calling trigger path
+# ══════════════════════════════════════════════════════════════════
+def draw_marker(win):
+    marker = getattr(win, _MARKER_CACHE_ATTR, None)
+
+    if marker is None:
+        win_width, win_height = WINDOW_SIZE
+        pos = _cell_center(win_width, win_height, MARKER_ROW, MARKER_COL)
+
+        cell_width = win_width / N_COLS
+        cell_height = win_height / N_ROWS
+        side = min(cell_width, cell_height) * MARKER_SIZE_FRAC
+
+        marker = visual.Rect(
+            win=win,
+            pos=pos,
+            width=side,
+            height=side,
+            fillColor="white",
+            lineColor="white",
+            units="pix",
+        )
+        setattr(win, _MARKER_CACHE_ATTR, marker)
+
+    marker.draw()

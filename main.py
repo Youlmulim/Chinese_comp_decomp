@@ -1,0 +1,94 @@
+"""
+main.py
+-------
+Top-level experiment controller.
+
+Execution flow
+--------------
+1. initiate_experiment() — subject info, trials, window, EyeLink
+2. Practice entry screen — QUIT skips all practice and starts the main experiment
+3. Practice Phase 0 — familiarity rating practice (no data saved)
+4. Practice Phases 1-3 — exit button leads to main experiment
+5. Phase 0 — familiarity ratings for basic characters (data saved)
+6. Phases 1-3 — phase loops
+7. Export full summary (CSV + JSON)
+8. Close window
+"""
+
+import random
+
+from psychopy import core
+
+from function.phases.phase1 import run_phase1
+from function.phases.phase2 import run_phase2
+from function.phases.phase3 import run_phase3
+from function.phases.phase_loop import run_phase0_loop, run_phase_loop
+from function.practice.practice_loop import run_practice_loop, run_practice_phase0_loop
+from function.io.metadata import export_metadata
+from function.io.path_builder import get_subject_dir
+from function.config import settings as cfg
+from function.utils.screen_utils import show_instructions, show_practice_screen
+from function.utils.sounds import play_sound, preload_sound
+from initiate import initiate_experiment
+from function.stimuli.trial_loader import load_practice_trials
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MAIN
+# ─────────────────────────────────────────────────────────────────────────────
+
+def main() -> None:
+    ctx = initiate_experiment()
+
+    practice_trials = load_practice_trials()
+    practice_char_list = list({char for t in practice_trials for char in (t["char1"], t["char2"])})
+
+    # Show the practice/QUIT screen before entering any practice phase.
+    # QUIT skips all practice and proceeds directly to the main experiment.
+    practice_action = show_practice_screen(ctx.win, cfg.PRACTICE_INSTRUCTION)
+    if practice_action != "exit":
+        # Practice Phase 0 — familiarity rating practice (no data saved)
+        run_practice_phase0_loop(ctx.win, practice_char_list, ctx.global_clock)
+
+        # Practice Phases 1–3 — unlimited trials, exit button leads to main experiment
+        run_practice_loop(ctx.win, practice_trials, ctx.global_clock)
+
+    # Phase 0 — familiarity ratings
+    show_instructions(ctx.win, cfg.P0_INSTRUCTION)
+    run_phase0_loop(
+        ctx.win,
+        ctx.char_list,
+        ctx.global_clock,
+        ctx.subject_id,
+    )
+
+    # Phases 1–3
+    _phase_fns = {1: run_phase1, 2: run_phase2, 3: run_phase3}
+    random.shuffle(ctx.trials)
+    run_phase_loop(
+        ctx.win,
+        ctx.trials,
+        ctx.global_clock,
+        ctx.subject_id,
+        _phase_fns,
+    )
+
+    # Export full summary
+    paths = export_metadata(
+        ctx.trials,
+        get_subject_dir(ctx.subject_id),
+        ctx.subject_id,
+        fmt="both",
+    )
+    print(f"[main] Summary saved → {paths}")
+
+    # Farewell & close
+    done_sound = preload_sound("sound_effect_done.wav")
+    ctx.win.callOnFlip(play_sound, done_sound)
+    show_instructions(ctx.win, "实验完成。\n\n谢谢！\n\n按空格键退出。")
+    ctx.win.close()
+    core.quit()
+
+
+if __name__ == "__main__":
+    main()

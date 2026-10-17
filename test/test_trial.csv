@@ -1,0 +1,5 @@
+stim_pair_id,char1,char2,char1_id,char2_id,canonical_pair,meaning,meaning_opt1,meaning_opt2
+pair_01,月,日,1,2,月日,明光,明光,升降
+pair_02,王,子,8,10,王子,陪伴,陪伴,继承
+pair_03,人,王,3,8,人王,责任,责任,全部
+pair_04,心,女,7,12,心女,知心,知心,心事
